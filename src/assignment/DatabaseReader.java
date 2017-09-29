@@ -15,9 +15,11 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.DefaultCaret;
 
 public class DatabaseReader implements ActionListener {
   
@@ -37,27 +39,6 @@ public class DatabaseReader implements ActionListener {
   private JFrame frame;
   private JTextArea response;
   private RowDisplay display;
-
-  // TODO Delete this
-  // Handy global vars for testing
-  private int ssn = 999;
-  private String name = "John Doe";
-  private String address = "100 Second Street";
-  private String bDate = "2017-09-23";
-  private char sex = 'm';
-  private int salary = 37000;
-  private int worksFor = 32;
-  private int manages = 33;
-  private int supervises = 33;
-
-  private String ssn2 = "Jane Doe";
-  private String address2 = "200 First Street";
-  private String bDate2 = "1998-08-23";
-  private char sex2 = 'f';
-  private int salary2 = 42000;
-  private int worksFor2 = 55;
-  private int manages2 = 56;
-  private int supervises2 = 57;
 
   /**
    * Constructor for DatebaseCreator
@@ -79,21 +60,23 @@ public class DatabaseReader implements ActionListener {
     contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.PAGE_AXIS));
     contentPane.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-    response = new JTextArea("Welcome");
+    response = new JTextArea("Welcome!");
     response.setRows(3);
     response.setLineWrap(true);
     response.setWrapStyleWord(true);
     response.setEditable(false);
-    contentPane.add(response);
     
+    JScrollPane scroll = new JScrollPane(response);
+    scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+    contentPane.add(scroll);
     
     display = new RowDisplay();
     contentPane.add(display);
 
     JPanel buttonPanel = new JPanel(new GridLayout(5, 2));
     // Top Row
-    addButton(buttonPanel, "Create Table");
-    addButton(buttonPanel, "Drop Table");
+    addButton(buttonPanel, "Create Tables");
+    addButton(buttonPanel, "Drop Tables");
 
     addButton(buttonPanel, "Read Next");
     addButton(buttonPanel, "Read Previous");
@@ -126,19 +109,25 @@ public class DatabaseReader implements ActionListener {
    * @param response The String to print.
    */
   private void printResponse(String response) {
-    this.response.setText(response);
+    this.response.append("\n" + response);
+    this.response .setCaretPosition(this.response.getDocument().getLength());
+
   }
 
   @Override
   public void actionPerformed(ActionEvent e) {
 
-    if (e.getActionCommand().equals("Create Table")) {
-      if (this.createTable(conn))
-        this.response.setText("Table Created");
+    if (e.getActionCommand().equals("Create Tables")) {
+      if (this.createTableEmployee(conn))
+        this.printResponse("Table Created: " + this.tableName);
+      if (this.createTableDepartment(conn))
+      	this.printResponse("Table Created: Department");
+      if (this.createTableProject(conn))
+      	this.printResponse("Table Created: Project");
 
-    } else if (e.getActionCommand().equals("Drop Table")) {
-      if (this.dropTable(conn)) {
-        this.printResponse("Table Dropped!");
+    } else if (e.getActionCommand().equals("Drop Tables")) {
+      if (this.dropTables(conn)) {
+        this.printResponse("Tables Dropped!");
         display.clearFields();
       }
 
@@ -152,7 +141,7 @@ public class DatabaseReader implements ActionListener {
       
     } else if (e.getActionCommand().equals("Populate")) {
       if (this.populate()) {
-        this.printResponse("Poulated Table");
+        this.printResponse("Poulated Tables");
         reset();
       }
       
@@ -247,7 +236,7 @@ public class DatabaseReader implements ActionListener {
       stmt.executeQuery(command); // This will throw a SQLException if it fails
       result = stmt.getResultSet();
     } catch (SQLException e) {
-      this.printResponse("ERROR: Could not get result set! " + e.getMessage());
+      this.printResponse("Error: Could not get result set! " + e.getMessage());
     }
     return result;
   }
@@ -329,7 +318,7 @@ public class DatabaseReader implements ActionListener {
       int manages = Integer.parseInt(display.getManagesField());
       int supervises = Integer.parseInt(display.getSupervisesField());
             
-      String insert = "INSERT INTO `Employee` VALUES (" + "'" + ssn + "', " + "'" + name + "', " + "'" + address + "', "
+      String insert = "INSERT INTO `" + this.tableName + "` VALUES (" + "'" + ssn + "', " + "'" + name + "', " + "'" + address + "', "
           + "'" + bDate + "', " + "'" + salary + "', " + "'" + sex + "', " + "'" + worksFor + "', " + "'" + manages
           + "', " + "'" + supervises + "')";
       
@@ -338,7 +327,7 @@ public class DatabaseReader implements ActionListener {
     } catch (NumberFormatException e1) {
       this.printResponse("Error reading input. " + e1.getMessage());
     } catch (SQLException e2) {
-      this.printResponse("ERROR: Could not insert. " + e2.getMessage());
+      this.printResponse("Error: Could not insert. " + e2.getMessage());
     }
     return false;
   }
@@ -373,7 +362,7 @@ public class DatabaseReader implements ActionListener {
       int manages = Integer.parseInt(display.getManagesField());
       int supervises = Integer.parseInt(display.getSupervisesField());
       
-      String update = "UPDATE `Employee` SET " + 
+      String update = "UPDATE `" + this.tableName + "` SET " + 
           "`NAME` = '" + name + "'," +
           "`ADDRESS` = '" + address + "'," +
           "`BDATE` = '" + bDate + "'," +
@@ -382,13 +371,13 @@ public class DatabaseReader implements ActionListener {
           "`WORKS_FOR` = '" + worksFor + "'," + 
           "`MANAGES` = '" + manages + "'," +
           "`SUPERVISES` = '" + supervises + "'" +
-          "WHERE `Employee`.`SSN` = '" + ssn + "'";
+          "WHERE `" + this.tableName + "`.`SSN` = '" + ssn + "'";
       this.executeUpdate(conn, update);
       return true;
     } catch (NumberFormatException e1) {
       this.printResponse("Error reading input. " + e1.getMessage());
     } catch (SQLException e2) {
-      this.printResponse("ERROR: Could not update. " + e2.getMessage());
+      this.printResponse("Error: Could not update. " + e2.getMessage());
     }
     return false;
   }
@@ -402,12 +391,12 @@ public class DatabaseReader implements ActionListener {
    */
   public boolean delete() {
     try {
-      String delete = "DELETE FROM `Employee` WHERE `Employee`.`SSN` = '"
+      String delete = "DELETE FROM `" + this.tableName + "` WHERE `" + this.tableName + "`.`SSN` = '"
           + Integer.parseInt(display.getSsnField()) + "'";
       this.executeUpdate(conn, delete);
       return true;
     } catch (SQLException e) {
-      this.printResponse("ERROR: Could not delete. " + e.getMessage());
+      this.printResponse("Error: Could not delete. " + e.getMessage());
       return false;
     }
   }
@@ -415,42 +404,93 @@ public class DatabaseReader implements ActionListener {
   /**
    * Create the Employee table.
    * 
-   * @param conn
-   *          The connection to the Table.
+   * @param conn The connection to the database.
    * @return True is successfully create, false otherwise/ app.run();
    */
-  public boolean createTable(Connection conn) {
+  public boolean createTableEmployee(Connection conn) {
 
     try {
-      String create = "CREATE TABLE " + this.tableName + " ( " + "SSN INTEGER NOT NULL, " + "NAME varchar(80) NOT NULL, "
-          + "ADDRESS varchar(80) NOT NULL, " + "BDATE DATE NOT NULL, " + "SALARY DECIMAL NOT NULL, "
-          + "SEX CHAR NOT NULL, " + "WORKS_FOR INTEGER, " + "MANAGES INTEGER, " + "SUPERVISES INTEGER, "
-          + "PRIMARY KEY (SSN))";
+      String create = "CREATE TABLE " + this.tableName + " ( " + 
+      		"SSN INTEGER NOT NULL, " +
+      		"NAME varchar(80) NOT NULL, " +
+      		"ADDRESS varchar(80) NOT NULL, " +
+      		"BDATE DATE NOT NULL, " +
+      		"SALARY DECIMAL NOT NULL, " +
+          "SEX CHAR NOT NULL, " +
+      		"WORKS_FOR INTEGER, " +
+          "MANAGES INTEGER, " +
+      		"SUPERVISES INTEGER, " +
+          "PRIMARY KEY (SSN))";
 
       this.executeUpdate(conn, create);
       return true;
     } catch (SQLException e) {
-      this.printResponse("ERROR: Could not create the table. " + e.getMessage());
+      this.printResponse("Error: Could not create the table:  " + this.tableName + ". "+ e.getMessage());
+      return false;
+    }
+  }
+  
+  /**
+   * Create the Department table.
+   * 
+   * @param conn The connection to the database.
+   * @return True is successfully create, false otherwise/ app.run();
+   */
+  public boolean createTableDepartment(Connection conn) {
+  	
+    try {
+      String create = "CREATE TABLE Department ( " +
+      		"NAME VARCHAR(100) NOT NULL, " +
+      		"NUMBER INTEGER NOT NULL, " +
+          "LOCATIONS VARCHAR(100) NOT NULL, " +
+          "PRIMARY KEY (NUMBER))";
+
+      this.executeUpdate(conn, create);
+      return true;
+    } catch (SQLException e) {
+      this.printResponse("Error: Could not create the table: Department " + e.getMessage());
+      return false;
+    }
+  }
+  
+  /**
+   * Create the Department table.
+   * 
+   * @param conn The connection to the database.
+   * @return True is successfully create, false otherwise/ app.run();
+   */
+  public boolean createTableProject(Connection conn) {
+  	
+    try {
+      String create = "CREATE TABLE Project ( " +
+      		"NAME VARCHAR(100) NOT NULL, " +
+      		"NUMBER INTEGER NOT NULL, " +
+          "LOCATIONS VARCHAR(80) NOT NULL, " +
+          "CONTROLLED_BY INTEGER NOT NULL, " +
+          "PRIMARY KEY (NAME, NUMBER))";
+
+      this.executeUpdate(conn, create);
+      return true;
+    } catch (SQLException e) {
+      this.printResponse("Error: Could not create the table: Project " + e.getMessage());
       return false;
     }
   }
   
 
-
   /**
    * Drop the Employee table.
    * 
-   * @param conn
-   *          The connection to the Table.
+   * @param conn The connection to the database.
    * @return True if successfully dropped, false otherwise.
    */
-  public boolean dropTable(Connection conn) {
+  public boolean dropTables(Connection conn) {
     try {
-      String dropString = "DROP TABLE " + this.tableName;
-      this.executeUpdate(conn, dropString);
+      String dropString = "DROP TABLE " + this.tableName + ", Department, Project";
+      this.executeUpdate(conn, dropString);      
       return true;
     } catch (SQLException e) {
-      this.printResponse("ERROR: Could not drop the table! " + e.getMessage());
+      this.printResponse("Error dropping tables! " + e.getMessage());
       return false;
     }
   }
@@ -463,13 +503,32 @@ public class DatabaseReader implements ActionListener {
    * @return True if successfully populated, false otherwise.
    */
   private boolean populate() {
-    String command1 = "INSERT INTO Employee "
-        + "VALUES (1, 'Joe Soap', '123 Main Street', '2017-09-23', 40000, 'm', 12, 13, 14)";
-    String command2 = "INSERT INTO Employee "
-        + "VALUES (2, 'Jimmy Bloggs', '10 High Street', '2017-09-22', 35000, 'm', 22, 23, 24)";
+  	
+  	// Add some employees
+    String employee1 = "INSERT INTO " + this.tableName +
+        " VALUES (1, 'Joe Soap', '123 Main Street', '1990-09-23', 40000, 'm', 12, 13, 14)";
+    String employee2 = "INSERT INTO " + this.tableName +
+        " VALUES (2, 'Jimmy Bloggs', '10 High Street', '1991-08-22', 35000, 'm', 22, 23, 24)";
+    
+    // Add some departments 
+    String department1 = "INSERT INTO Department" +
+        " VALUES ('IT', 100, 'Waterford, Dublin')";
+    String department2 = "INSERT INTO Department" +
+        " VALUES ('Marketing', 101, 'Waterford, Cork')";
+
+    // Add some projects
+    String project1 = "INSERT INTO Project" +
+        " VALUES ('Paperclip', 9001, 'Waterford', 1)";
+    String project2 = "INSERT INTO Project" +
+        " VALUES ('Manhattan', 9002, 'Cork', 2)";
+    
     try {
-      executeUpdate(conn, command1);
-      executeUpdate(conn, command2);
+      executeUpdate(conn, employee1);
+      executeUpdate(conn, employee2);
+      executeUpdate(conn, department1);
+      executeUpdate(conn, department2);
+      executeUpdate(conn, project1);
+      executeUpdate(conn, project2);
       return true;
     } catch (SQLException e) {
       System.out.println("Error populating! " + e.getMessage());
@@ -485,7 +544,7 @@ public class DatabaseReader implements ActionListener {
    * @return A Result Set containing all rows in the table.
    */
   private ResultSet getRows() {
-    String readCommand = "SELECT * FROM Employee";
+    String readCommand = "SELECT * FROM " + this.tableName;
     return executeQuery(conn, readCommand);
   }
   
@@ -507,7 +566,7 @@ public class DatabaseReader implements ActionListener {
     // Connect to MySQL
     try {
       conn = this.getConnection();
-      System.out.println("Connected to database");
+      printResponse("Connected to database");
     } catch (SQLException e) {
       System.out.println("Error reading from database! " + e.getMessage());
       e.printStackTrace();
