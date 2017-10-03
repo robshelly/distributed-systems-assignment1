@@ -19,7 +19,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
-import javax.swing.text.DefaultCaret;
 
 public class DatabaseReader implements ActionListener {
   
@@ -32,6 +31,7 @@ public class DatabaseReader implements ActionListener {
   private final String tableName = "Employee";
 
   // Required Global Vars
+  private Statement statement = null;
   private ResultSet resultSet = null;
   private Connection conn = null;
 
@@ -127,6 +127,7 @@ public class DatabaseReader implements ActionListener {
 
     } else if (e.getActionCommand().equals("Drop Tables")) {
       if (this.dropTables(conn)) {
+        closeQuery();
         this.printResponse("Tables Dropped!");
         display.clearFields();
       }
@@ -146,18 +147,21 @@ public class DatabaseReader implements ActionListener {
       }
       
     } else if (e.getActionCommand().equals("Insert")) {
+      closeQuery();
       if (this.insert()) {
         this.printResponse("Row Inserted");
         reset();
       }
       
     } else if (e.getActionCommand().equals("Update")) {
+      closeQuery();
       if (this.update()) {
         this.printResponse("Row Updated");
         reset();
       }
       
     } else if (e.getActionCommand().equals("Delete")) {
+      closeQuery();
       if (this.delete()) {
         this.printResponse("Row Deleted");
         reset();
@@ -168,7 +172,8 @@ public class DatabaseReader implements ActionListener {
     
     } else if (e.getActionCommand().equals("Exit")) {
       try {
-        conn.close();
+        closeQuery();
+        if (this.conn != null) this.conn.close();
       } catch (SQLException err) {
         System.out.println("Failed to close connection! " + err.getMessage());
       }
@@ -229,16 +234,14 @@ public class DatabaseReader implements ActionListener {
    * @throws SQLException
    */
   public ResultSet executeQuery(Connection conn, String command) {
-    Statement stmt = null;
-    ResultSet result = null;
     try {
-      stmt = conn.createStatement();
-      stmt.executeQuery(command); // This will throw a SQLException if it fails
-      result = stmt.getResultSet();
+      statement = conn.createStatement();
+      statement.executeQuery(command); // This will throw a SQLException if it fails
+      return statement.getResultSet();
     } catch (SQLException e) {
       this.printResponse("Error: Could not get result set! " + e.getMessage());
     }
-    return result;
+    return null;
   }
 
 
@@ -531,7 +534,7 @@ public class DatabaseReader implements ActionListener {
       executeUpdate(conn, project2);
       return true;
     } catch (SQLException e) {
-      System.out.println("Error populating! " + e.getMessage());
+      this.printResponse("Error populating! " + e.getMessage());
       return false;
     }
   }
@@ -575,6 +578,19 @@ public class DatabaseReader implements ActionListener {
 
     // Initialise ResultSet
     resultSet = getRows();
+  }
+
+  /**
+   * Close the global statement and result set used for readin
+   * next and previous rows.
+   */
+  private void closeQuery() {
+    try {
+	    if (this.resultSet != null) this.resultSet.close();
+	    if (this.statement != null) this.statement.close();
+    } catch (SQLException e) {
+      this.printResponse("Error closing result set. " + e.getMessage());
+    }
   }
 
  
